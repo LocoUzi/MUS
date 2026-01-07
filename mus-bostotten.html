@@ -500,13 +500,12 @@
             <div id="detailAnswers"></div>
 
             <div class="navigation-buttons">
-                <button class="btn btn-success" onclick="exportToWord()">📄 Gem som Word-dokument</button>
+                <button class="btn btn-success" onclick="exportToPDF()">📄 Gem som PDF-dokument</button>
             </div>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
         // State management
         let currentUser = null;
@@ -1230,11 +1229,11 @@ ${notes ? 'Bemærkninger: ' + notes : ''}`;
             alert('✅ Spørgsmål gemt! Nye medarbejdere vil få de opdaterede spørgsmål.');
         }
 
-        // Export to Word
-        async function exportToWord() {
-            // Check if docx library is loaded
-            if (typeof docx === 'undefined') {
-                alert('⚠️ Word-eksport biblioteket er ikke loaded endnu.\n\nVent et øjeblik og prøv igen.\n\nHvis problemet fortsætter, genindlæs siden (F5).');
+        // Export to PDF
+        function exportToPDF() {
+            // Check if jsPDF library is loaded
+            if (typeof window.jspdf === 'undefined') {
+                alert('⚠️ PDF-biblioteket er ikke loaded endnu.\n\nVent et øjeblik og prøv igen.');
                 return;
             }
 
@@ -1242,169 +1241,126 @@ ${notes ? 'Bemærkninger: ' + notes : ''}`;
             const data = getAllMUSData()[email];
 
             try {
-                const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Packer } = docx;
-
-            // Create document sections
-            const sections = [];
-
-            // Header
-            sections.push(
-                new Paragraph({
-                    text: "Medarbejderudviklingssamtale (MUS)",
-                    heading: HeadingLevel.HEADING_1,
-                    alignment: AlignmentType.CENTER,
-                }),
-                new Paragraph({
-                    text: `Medarbejder: ${data.name}`,
-                    spacing: { before: 200, after: 100 }
-                }),
-                new Paragraph({
-                    text: `Team: ${data.team}`,
-                    spacing: { after: 100 }
-                }),
-                new Paragraph({
-                    text: `Dato: ${new Date().toLocaleDateString('da-DK')}`,
-                    spacing: { after: 400 }
-                })
-            );
-
-            // Add booking info if exists
-            if (data.booking) {
-                sections.push(
-                    new Paragraph({
-                        text: `MUS-samtale booket med ${data.booking.leader || 'leder'}: ${data.booking.date} kl. ${data.booking.time}`,
-                        spacing: { after: 400 }
-                    })
-                );
-            }
-
-            // Add all answers
-            data.answers.forEach((section) => {
-                sections.push(
-                    new Paragraph({
-                        text: section.section,
-                        heading: HeadingLevel.HEADING_2,
-                        spacing: { before: 400, after: 200 }
-                    })
-                );
-
-                section.questions.forEach((q, idx) => {
-                    sections.push(
-                        new Paragraph({
-                            text: `${idx + 1}. ${q.text}`,
-                            spacing: { before: 200, after: 100 },
-                            bold: true
-                        })
-                    );
-
-                    if (q.type === 'textarea') {
-                        sections.push(
-                            new Paragraph({
-                                text: "Medarbejderens svar:",
-                                spacing: { before: 100 },
-                                italics: true
-                            }),
-                            new Paragraph({
-                                text: q.answer || "Ikke besvaret",
-                                spacing: { after: 100 }
-                            })
-                        );
-                        
-                        // Add leader comment if exists
-                        if (q.leaderComment) {
-                            sections.push(
-                                new Paragraph({
-                                    text: "Lederens kommentarer / Aftaler:",
-                                    spacing: { before: 100 },
-                                    italics: true,
-                                    bold: true
-                                }),
-                                new Paragraph({
-                                    text: q.leaderComment,
-                                    spacing: { after: 200 }
-                                })
-                            );
-                        } else {
-                            sections.push(
-                                new Paragraph({
-                                    text: "",
-                                    spacing: { after: 200 }
-                                })
-                            );
-                        }
-                        
-                    } else if (q.type === 'scale') {
-                        sections.push(
-                            new Paragraph({
-                                text: `Vurdering: ${q.answer || "Ikke besvaret"}`,
-                                spacing: { after: 100 }
-                            })
-                        );
-
-                        if (q.followup) {
-                            sections.push(
-                                new Paragraph({
-                                    text: "Medarbejderens uddybning:",
-                                    spacing: { before: 100 },
-                                    italics: true
-                                }),
-                                new Paragraph({
-                                    text: q.followup,
-                                    spacing: { after: 100 }
-                                })
-                            );
-                        }
-                        
-                        // Add leader comment if exists
-                        if (q.leaderComment) {
-                            sections.push(
-                                new Paragraph({
-                                    text: "Lederens kommentarer / Aftaler:",
-                                    spacing: { before: 100 },
-                                    italics: true,
-                                    bold: true
-                                }),
-                                new Paragraph({
-                                    text: q.leaderComment,
-                                    spacing: { after: 200 }
-                                })
-                            );
-                        } else {
-                            sections.push(
-                                new Paragraph({
-                                    text: "",
-                                    spacing: { after: 200 }
-                                })
-                            );
-                        }
-                    }
-                });
-            });
-
-            // Create document
-            const doc = new Document({
-                sections: [{
-                    properties: {},
-                    children: sections
-                }]
-            });
-
-            // Generate and save
-            const blob = await Packer.toBlob(doc);
-            saveAs(blob, `MUS_${data.name}_${new Date().toISOString().split('T')[0]}.docx`);
-
-            // Ask to delete data
-            if (confirm(`Word-dokument gemt!\n\nVil du slette ${data.name}'s data fra systemet?\n\n(Data skal slettes når MUS er afholdt og dokumentet er lagt i P-sagen)`)) {
-                const allData = getAllMUSData();
-                delete allData[email];
-                localStorage.setItem('musDataBostotten', JSON.stringify(allData));
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
                 
-                alert('✅ Data slettet fra systemet');
-                backToLeaderDashboard();
-            }
+                let yPos = 20;
+                const pageHeight = doc.internal.pageSize.height;
+                const margin = 20;
+                const maxWidth = 170;
+                
+                // Helper function to add text with page break
+                function addText(text, fontSize = 12, isBold = false, addSpace = 5) {
+                    if (yPos > pageHeight - 20) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    
+                    doc.setFontSize(fontSize);
+                    doc.setFont(undefined, isBold ? 'bold' : 'normal');
+                    
+                    const lines = doc.splitTextToSize(text, maxWidth);
+                    lines.forEach(line => {
+                        if (yPos > pageHeight - 20) {
+                            doc.addPage();
+                            yPos = 20;
+                        }
+                        doc.text(line, margin, yPos);
+                        yPos += fontSize * 0.5;
+                    });
+                    yPos += addSpace;
+                }
+                
+                // Title
+                addText('Medarbejderudviklingssamtale (MUS)', 18, true, 10);
+                
+                // Header info
+                addText(`Medarbejder: ${data.name}`, 12, false, 3);
+                addText(`Team: ${data.team}`, 12, false, 3);
+                addText(`Dato: ${new Date().toLocaleDateString('da-DK')}`, 12, false, 10);
+                
+                // Booking info
+                if (data.booking) {
+                    addText(`MUS-samtale booket med ${data.booking.leader}: ${data.booking.date} kl. ${data.booking.time}`, 11, false, 10);
+                }
+                
+                // All answers and leader comments
+                data.answers.forEach((section, sIdx) => {
+                    // Section header
+                    addText(section.section, 14, true, 8);
+                    
+                    section.questions.forEach((q, qIdx) => {
+                        // Question
+                        addText(`${qIdx + 1}. ${q.text}`, 11, true, 5);
+                        
+                        if (q.type === 'textarea') {
+                            // Employee answer
+                            addText('Medarbejderens svar:', 10, true, 3);
+                            addText(q.answer || 'Ikke besvaret', 10, false, 5);
+                            
+                            // Leader comment
+                            if (q.leaderComment) {
+                                addText('Lederens kommentarer / Aftaler:', 10, true, 3);
+                                addText(q.leaderComment, 10, false, 8);
+                            } else {
+                                yPos += 3;
+                            }
+                            
+                        } else if (q.type === 'scale') {
+                            // Employee rating
+                            addText(`Vurdering: ${q.answer || 'Ikke besvaret'}`, 10, false, 3);
+                            
+                            // Employee followup
+                            if (q.followup) {
+                                addText('Medarbejderens uddybning:', 10, true, 3);
+                                addText(q.followup, 10, false, 5);
+                            }
+                            
+                            // Leader comment
+                            if (q.leaderComment) {
+                                addText('Lederens kommentarer / Aftaler:', 10, true, 3);
+                                addText(q.leaderComment, 10, false, 8);
+                            } else {
+                                yPos += 3;
+                            }
+                        }
+                    });
+                });
+                
+                // Signature section
+                yPos += 15;
+                addText('Underskrifter', 14, true, 10);
+                
+                // Employee signature
+                addText('Medarbejder:', 11, true, 5);
+                addText('_________________________________________', 11, false, 3);
+                addText(`${data.name}`, 10, false, 3);
+                addText(`Dato: _____________________`, 10, false, 10);
+                
+                // Leader signature
+                addText('Leder:', 11, true, 5);
+                addText('_________________________________________', 11, false, 3);
+                addText(data.booking && data.booking.leader ? data.booking.leader : '___________________', 10, false, 3);
+                addText(`Dato: _____________________`, 10, false, 10);
+                
+                // Save PDF
+                doc.save(`MUS_${data.name}_${new Date().toISOString().split('T')[0]}.pdf`);
+                
+                // Ask to delete data
+                setTimeout(() => {
+                    if (confirm(`PDF-dokument gemt!\n\nVil du slette ${data.name}'s data fra systemet?\n\n(Data skal slettes når MUS er afholdt og dokumentet er lagt i P-sagen)`)) {
+                        const allData = getAllMUSData();
+                        delete allData[email];
+                        localStorage.setItem('musDataBostotten', JSON.stringify(allData));
+                        
+                        alert('✅ Data slettet fra systemet');
+                        backToLeaderDashboard();
+                    }
+                }, 500);
+                
             } catch (error) {
-                console.error('Word export error:', error);
-                alert('❌ Der opstod en fejl ved eksport til Word.\n\nFejl: ' + error.message + '\n\nPrøv at genindlæse siden (F5) og forsøg igen.');
+                console.error('PDF export error:', error);
+                alert('❌ Der opstod en fejl ved eksport til PDF.\n\nFejl: ' + error.message + '\n\nPrøv at genindlæse siden (F5) og forsøg igen.');
             }
         }
 
@@ -1414,11 +1370,8 @@ ${notes ? 'Bemærkninger: ' + notes : ''}`;
             
             // Check if libraries loaded correctly
             setTimeout(() => {
-                if (typeof docx === 'undefined') {
-                    console.error('DOCX library failed to load from CDN');
-                }
-                if (typeof saveAs === 'undefined') {
-                    console.error('FileSaver library failed to load from CDN');
+                if (typeof window.jspdf === 'undefined') {
+                    console.error('jsPDF library failed to load from CDN');
                 }
             }, 2000);
         };
