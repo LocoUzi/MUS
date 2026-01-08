@@ -420,6 +420,7 @@
                         <option value="5">Klynge 5</option>
                         <option value="6">Klynge 6</option>
                         <option value="7">Klynge 7</option>
+                        <option value="Nattevagt">Nattevagt</option>
                     </select>
                 </div>
                 <button class="btn" onclick="sendCode()">Send engangskode</button>
@@ -559,6 +560,7 @@
                         <option value="5">Klynge 5</option>
                         <option value="6">Klynge 6</option>
                         <option value="7">Klynge 7</option>
+                        <option value="Nattevagt">Nattevagt</option>
                     </select>
                 </div>
                 <div id="employeesList"></div>
@@ -1409,14 +1411,35 @@ ${notes ? 'Bemærkninger: ' + notes : ''}`;
                 const datetime = new Date(datetimeInput).toISOString();
                 await addTimeSlotToDB(currentLeader, datetime);
                 
+                // Open Outlook to add to leader's calendar
+                openOutlookForLeaderTimeSlot(datetime);
+                
                 document.getElementById('newTimeSlot').value = '';
                 await renderTimeSlots();
                 
-                alert('✅ Tid tilføjet!');
+                alert('✅ Tid tilføjet!\n\nOutlook åbner nu så du kan tilføje tiden til din kalender.');
             } catch (error) {
                 console.error('Add time slot error:', error);
                 alert('Fejl ved tilføjelse af tid');
             }
+        }
+
+        function openOutlookForLeaderTimeSlot(datetime) {
+            const date = new Date(datetime);
+            const startISO = date.toISOString();
+            const endDate = new Date(date.getTime() + 60 * 60 * 1000); // 1 hour
+            const endISO = endDate.toISOString();
+            
+            const subject = 'MUS-samtale (LEDIG TID)';
+            const body = `Ledig tid til MUS-samtale.
+
+Denne tid er tilgængelig for medarbejdere at booke.
+
+Når en medarbejder booker denne tid, får du en møde-invitation fra dem.`;
+            
+            const outlookWebUrl = `https://outlook.office.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}&location=${encodeURIComponent('Katrinehaven')}&startdt=${encodeURIComponent(startISO)}&enddt=${encodeURIComponent(endISO)}&path=/calendar/action/compose&rru=addevent`;
+            
+            window.open(outlookWebUrl, '_blank');
         }
 
         async function deleteTimeSlot(slotId) {
