@@ -405,23 +405,59 @@
             </div>
 
             <div id="employeeLogin">
-                <div class="form-group">
-                    <label for="employeeEmail">Din arbejds-email:</label>
-                    <input type="email" id="employeeEmail" placeholder="din.email@viborg.dk">
+                <div id="newUserLogin">
+                    <div class="form-group">
+                        <label for="employeeEmail">Din arbejds-email:</label>
+                        <input type="email" id="employeeEmail" placeholder="din.email@viborg.dk">
+                    </div>
+                    <div class="form-group">
+                        <label for="employeeCluster">Vælg dit team:</label>
+                        <select id="employeeCluster">
+                            <option value="">-- Vælg team --</option>
+                            <option value="1">Team 1</option>
+                            <option value="2">Team 2</option>
+                            <option value="3">Team 3</option>
+                            <option value="4">Team 4</option>
+                            <option value="5">Team 5</option>
+                            <option value="Øvrige">Øvrige personale</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="sendCode()">Send engangskode</button>
+                    
+                    <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                        <p style="color: #666; margin-bottom: 10px;">Har du allerede en kode?</p>
+                        <button class="btn btn-secondary" onclick="showDirectLogin()">Log ind med kode</button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="employeeCluster">Vælg dit team:</label>
-                    <select id="employeeCluster">
-                        <option value="">-- Vælg team --</option>
-                        <option value="1">Team 1</option>
-                        <option value="2">Team 2</option>
-                        <option value="3">Team 3</option>
-                        <option value="4">Team 4</option>
-                        <option value="5">Team 5</option>
-                        <option value="Øvrige">Øvrige personale</option>
-                    </select>
+
+                <div id="directCodeLogin" style="display: none;">
+                    <div class="form-group">
+                        <label for="directEmail">Din arbejds-email:</label>
+                        <input type="email" id="directEmail" placeholder="din.email@viborg.dk">
+                    </div>
+                    <div class="form-group">
+                        <label for="directCluster">Vælg dit team:</label>
+                        <select id="directCluster">
+                            <option value="">-- Vælg team --</option>
+                            <option value="1">Team 1</option>
+                            <option value="2">Team 2</option>
+                            <option value="3">Team 3</option>
+                            <option value="4">Team 4</option>
+                            <option value="5">Team 5</option>
+                            <option value="Øvrige">Øvrige personale</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="directCode">Din 4-cifrede kode:</label>
+                        <input type="text" id="directCode" placeholder="Indtast din kode" maxlength="4">
+                    </div>
+                    <button class="btn" onclick="directLogin()">Log ind</button>
+                    
+                    <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                        <p style="color: #666; margin-bottom: 10px;">Har du ikke en kode endnu?</p>
+                        <button class="btn btn-secondary" onclick="showNewUserLogin()">Få tilsendt kode</button>
+                    </div>
                 </div>
-                <button class="btn" onclick="sendCode()">Send engangskode</button>
             </div>
 
             <div id="leaderLogin" style="display: none;">
@@ -981,6 +1017,72 @@
             const type = document.getElementById('loginType').value;
             document.getElementById('employeeLogin').style.display = type === 'employee' ? 'block' : 'none';
             document.getElementById('leaderLogin').style.display = type === 'leader' ? 'block' : 'none';
+        }
+
+        function showDirectLogin() {
+            document.getElementById('newUserLogin').style.display = 'none';
+            document.getElementById('directCodeLogin').style.display = 'block';
+        }
+
+        function showNewUserLogin() {
+            document.getElementById('newUserLogin').style.display = 'block';
+            document.getElementById('directCodeLogin').style.display = 'none';
+        }
+
+        async function directLogin() {
+            const email = document.getElementById('directEmail').value.trim();
+            const cluster = document.getElementById('directCluster').value;
+            const code = document.getElementById('directCode').value.trim();
+
+            if (!email || !email.includes('@')) {
+                alert('Indtast venligst en gyldig email-adresse');
+                return;
+            }
+
+            if (!cluster) {
+                alert('Vælg venligst dit team');
+                return;
+            }
+
+            if (!code || code.length !== 4) {
+                alert('Indtast venligst din 4-cifrede kode');
+                return;
+            }
+
+            try {
+                const userData = await getMUSData(email);
+
+                if (!userData) {
+                    alert('Email ikke fundet. Hvis det er din første gang, skal du få tilsendt en kode.');
+                    return;
+                }
+
+                if (userData.permanentCode !== code) {
+                    alert('Forkert kode. Prøv igen.');
+                    return;
+                }
+
+                // Update cluster if changed
+                if (userData.cluster !== cluster) {
+                    userData.cluster = cluster;
+                    await saveMUSData(email, userData);
+                }
+
+                // Set current user
+                currentUser = {
+                    email: email,
+                    name: userData.name,
+                    cluster: cluster
+                };
+                currentCode = code;
+                isLeader = false;
+
+                await showEmployeeDashboard();
+
+            } catch (error) {
+                console.error('Direct login error:', error);
+                alert('Fejl ved login. Prøv igen.');
+            }
         }
 
         async function sendCode() {
