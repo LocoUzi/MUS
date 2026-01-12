@@ -1443,16 +1443,21 @@
                 userData.booking = booking;
                 await saveMUSData(currentUser.email, userData);
 
-                // Open Outlook
-                openOutlookWebMeeting(slot.datetime, leader, LEADER_EMAILS[leader], notes);
-
+                // Show success message BEFORE opening Outlook
                 alert(`✅ MUS-booking gemt!\n\nLeder: ${leader}\nTid: ${new Date(slot.datetime).toLocaleString('da-DK')}\n\nOutlook åbner nu i en ny fane så du kan sende møde-invitationen.`);
+                
+                // Open Outlook (this might trigger pop-up blocker but booking is already saved)
+                try {
+                    openOutlookWebMeeting(slot.datetime, leader, LEADER_EMAILS[leader], notes);
+                } catch (outlookError) {
+                    console.log('Outlook open error (non-critical):', outlookError);
+                }
                 
                 await loadBookingInfo();
                 showEmployeeTab('booking');
             } catch (error) {
                 console.error('Book MUS error:', error);
-                alert('Fejl ved booking. Prøv igen.');
+                alert('❌ Fejl ved booking. Bookingen blev ikke gemt. Prøv igen.');
             }
         }
 
