@@ -951,11 +951,11 @@
             return cachedQuestions;
         }
 
-        async function saveQuestions(questions) {
-            const questionsRef = window.firebaseRef(window.firebaseDB, 'questions');
-            await window.firebaseSet(questionsRef, questions);
-            cachedQuestions = questions;
-        }
+     async function saveQuestions(questions) {
+    const questionsRef = window.firebaseRef(window.firebaseDB, 'questions');
+    await window.firebaseSet(questionsRef, questions);
+    cachedQuestions = questions;
+}
 
         async function getLeaderPasswords() {
             const passwordsRef = window.firebaseRef(window.firebaseDB, 'leaderPasswords');
