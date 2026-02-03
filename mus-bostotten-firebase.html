@@ -1896,38 +1896,30 @@ Når en medarbejder booker denne tid, får du en møde-invitation fra dem.`;
             }
         }
 
-        async function saveQuestionsFromEditor() {
-            const btn = event.target;
-            const originalText = btn.textContent;
-            
-            try {
-                btn.disabled = true;
-                btn.textContent = 'Gemmer...';
-                
-                const questions = await getQuestions();
+       async function saveQuestionsFromEditor(e) {
+    try {
+        const questions = await getQuestions();
 
-                questions.forEach((section) => {
-                    section.questions.forEach((q) => {
-                        const textarea = document.getElementById(`edit_${q.id}`);
-                        if (textarea) {
-                            q.text = textarea.value;
-                        }
-                    });
-                });
+        questions.forEach((section) => {
+            section.questions.forEach((q) => {
+                const textarea = document.getElementById(`edit_${q.id}`);
+                if (textarea) {
+                    q.text = textarea.value;
+                }
+            });
+        });
 
-                await saveQuestions(questions);
-                
-                btn.disabled = false;
-                btn.textContent = originalText;
-                
-                alert('✅ Spørgsmål gemt! Nye medarbejdere vil få de opdaterede spørgsmål.');
-            } catch (error) {
-                console.error('Save questions error:', error);
-                
-                btn.disabled = false;
-                btn.textContent = originalText;
-                
-                alert('❌ Fejl ved gemning af spørgsmål. Prøv igen.');
+        // Direct Firebase save without cache
+        const questionsRef = window.firebaseRef(window.firebaseDB, 'questions');
+        await window.firebaseSet(questionsRef, questions);
+        
+        alert('✅ Spørgsmål gemt!');
+        
+    } catch (error) {
+        console.error('Save questions error:', error);
+        alert('❌ Fejl: ' + error.message);
+    }
+}
             }
         }
 
