@@ -1897,7 +1897,13 @@ Når en medarbejder booker denne tid, får du en møde-invitation fra dem.`;
         }
 
         async function saveQuestionsFromEditor() {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            
             try {
+                btn.disabled = true;
+                btn.textContent = 'Gemmer...';
+                
                 const questions = await getQuestions();
 
                 questions.forEach((section) => {
@@ -1910,10 +1916,18 @@ Når en medarbejder booker denne tid, får du en møde-invitation fra dem.`;
                 });
 
                 await saveQuestions(questions);
+                
+                btn.disabled = false;
+                btn.textContent = originalText;
+                
                 alert('✅ Spørgsmål gemt! Nye medarbejdere vil få de opdaterede spørgsmål.');
             } catch (error) {
                 console.error('Save questions error:', error);
-                alert('Fejl ved gem ning af spørgsmål');
+                
+                btn.disabled = false;
+                btn.textContent = originalText;
+                
+                alert('❌ Fejl ved gemning af spørgsmål. Prøv igen.');
             }
         }
 
